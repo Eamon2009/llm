@@ -1,9 +1,12 @@
-
+# Deploy the static site to GitHub Pages on every push to master.
 name: Deploy site to GitHub Pages
 
 on:
   push:
     branches: [master]
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -11,6 +14,7 @@ permissions:
   id-token: write
   contents: read
 
+# Allow one concurrent deployment; cancel in-progress runs on new pushes.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -31,8 +35,8 @@ jobs:
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
-  
-          path: .
+          # The site is plain HTML/CSS/JS — no build step needed.
+          path: site
 
       - name: Deploy to GitHub Pages
         id: deployment
