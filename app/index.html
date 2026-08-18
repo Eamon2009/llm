@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>llm.cpp — LLM training in plain C++17</title>
+<meta name="description" content="Decoder-only GPT training in ~1,000 lines of dependency-free C++17. Custom tensors, analytical backward pass, BPE tokenizer. CPU reference build, CUDA and Metal variants." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;650;700&display=swap" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav-left">
+    <a href="./" class="brand"><span class="mark">{ }</span>llm.cpp</a>
+    <span class="nav-divider" aria-hidden="true"></span>
+    <div class="nav-links">
+      <a href="#hardware">Hardware</a>
+      <a href="docs.html">Docs</a>
+    </div>
+  </nav>
+  <a class="github-link" href="https://github.com/Eamon2009/llm.cpp" target="_blank" rel="noreferrer">
+    <img src="assets/github.png" alt="GitHub" /><span>GitHub</span>
+  </a>
+</header>
+
+<section class="hero">
+  <span class="kicker"><span class="dot"></span>C++17 · zero dependencies · GPL-3.0</span>
+  <h1>Train a transformer in plain C++.</h1>
+  <p class="lede">
+    llm.cpp is a decoder-only GPT written in roughly 1,000 lines of dependency-free C++17.
+    Custom tensors, multi-head causal self-attention, an analytical backward pass, AdamW, and a
+    token-level BPE tokenizer — every gradient derived and written out by hand. No PyTorch.
+    No Python runtime. No autograd hiding the math.
+  </p>
+  <div class="hero-actions">
+    <a class="btn primary" href="https://github.com/Eamon2009/llm.cpp" target="_blank" rel="noreferrer"><img src="assets/github.png" alt="" />Clone the repo</a>
+    <a class="btn" href="docs.html">Read the docs</a>
+    <a class="btn" href="#quickstart">Quick start</a>
+  </div>
+</section>
+
+<section class="block" id="hardware">
+  <div class="section-head">
+    <span class="mono-tag">Supported targets</span>
+    <h2>Runs on the hardware you already have.</h2>
+    <p>The zero-dependency CPU build compiles with a single <code style="font-family:var(--mono);font-size:.9em">g++</code> invocation on Linux, macOS, and Windows. CUDA and Apple Metal variants live alongside it for when you need VRAM instead of transparency.</p>
+  </div>
+  <div class="hw-grid">
+    <div class="hw-chip"><img src="assets/cplusplus.png" alt="C++" /><span>x86-64 CPU<small>g++ · OpenMP</small></span></div>
+    <div class="hw-chip"><img src="assets/nvidia.png" alt="NVIDIA" /><span>NVIDIA CUDA<small>llmcpp/ · bfloat16</small></span></div>
+    <div class="hw-chip"><img src="assets/apple.png" alt="Apple" /><span>Apple Silicon<small>Metal · llm.mm</small></span></div>
+    <div class="hw-chip"><img src="assets/amd.png" alt="AMD" /><span>AMD Ryzen<small>reference bench host</small></span></div>
+    <div class="hw-chip"><img src="assets/linux.png" alt="Linux" /><span>Linux<small>VmRSS tracking</small></span></div>
+    <div class="hw-chip"><img src="assets/windows.png" alt="Windows" /><span>Windows<small>K32GetProcessMemoryInfo</small></span></div>
+    <div class="hw-chip"><img src="assets/apple.png" alt="macOS" /><span>macOS<small>task_info RSS</small></span></div>
+    <div class="hw-chip"><img src="assets/cmake.png" alt="CMake" /><span>CMake<small>optional build</small></span></div>
+    <div class="hw-chip"><img src="assets/docker.png" alt="Docker" /><span>Docker<small>container build</small></span></div>
+  </div>
+</section>
+
+<section class="block" id="quickstart">
+  <div class="section-head">
+    <span class="mono-tag">Quick start</span>
+    <h2>One compiler flag away from a training loop.</h2>
+    <p>Point it at a text file. It tokenizes, builds the model, prints the architecture and your host hardware, then starts stepping. RAM, loss, learning rate, and tokens-per-second on every line.</p>
+  </div>
+
+  <div class="term">
+    <div class="term-bar"><span class="dots"><i></i><i></i><i></i></span>sh — llm.cpp</div>
+<pre><span class="c"># Compile — no CMake required</span>
+<span class="p">$</span> g++ -std=c++17 -O3 -march=native -fopenmp -I. -Iinclude -o llm.exe main.cpp
+
+<span class="c"># Train on a text file</span>
+<span class="p">$</span> ./llm.exe data/input.txt
+
+<span class="c"># Generate from the best checkpoint, or chat interactively</span>
+<span class="p">$</span> ./llm.exe data/input.txt --generate
+<span class="p">$</span> ./llm.exe data/input.txt --chat --chat-tokens 300</pre>
+  </div>
+
+  <div style="height:16px"></div>
+
+  <div class="term">
+    <div class="term-bar"><span class="dots"><i></i><i></i><i></i></span>output</div>
+<pre><span class="dim">[DATA]  Total tokens : 3521179
+[DATA]  Train tokens : 3169061
+[DATA]  Val tokens   : 352118
+ +------------------------------------------+------------------------------------------+
+ | LLM Architecture                                                           |
+ +------------------------------------------+------------------------------------------+
+ | Max Context Length   : 24                | Vocab Size (BPE)     : 2056              |
+ | Number of Layers     : 6                 | Attention Heads      : 6                 |
+ | Embedding Channels   : 128               | Total Parameters     : 1712904           |
+ +------------------------------------------+------------------------------------------+
+ | Host CPU Device      : AMD Ryzen 5 PRO 3500U w/ Radeon...                           |
+ | Host RAM (Total)     : 6045 MB                                                      |
+ +-------------------------------------------------------------------------------------+</span>
+step 1/20000 (0.01%) | train loss 7.647731 | val loss 7.663259 | lr 3.00e-07 | 960.52 ms | 199 tok/s | ram 70.9 MB
+step 2/20000 (0.01%) | train loss 7.637784 | val loss 7.663259 | lr 6.00e-07 | 1243.27 ms | 154 tok/s | ram 70.9 MB
+step 3/20000 (0.01%) | train loss 7.658248 | val loss 7.663259 | lr 9.00e-07 | 994.39 ms | 193 tok/s | ram 70.9 MB
+[SAVE]  Weights written to best_model.bin</pre>
+  </div>
+</section>
+
+<section class="block">
+  <div class="section-head">
+    <span class="mono-tag">Architecture</span>
+    <h2>Everything is a compile-time constant in one header.</h2>
+    <p>Decoder-only GPT with pre-layer-norm residual blocks. Embedding width, layers, heads, context length, learning rate schedule — all of it lives in <code style="font-family:var(--mono);font-size:.9em">config/config.h</code>.</p>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h3>The backward pass, spelled out</h3>
+      <p>No autograd engine. <code>SavedForward</code> caches every intermediate from the forward pass — pre-softmax attention scores, dropout masks, ReLU inputs, layer norm statistics — and <code>include/backward.h</code> walks the graph in reverse with plain C++ loops that do exactly what the math says.</p>
+      <p>Gradients are accumulated, not overwritten, so mini-batch accumulation works. <code>AdamWState</code> tracks first and second moments per parameter and applies bias-corrected updates.</p>
+      <p>Debugging tip: swap <code>-O3</code> for <code>-g</code> and step through <code>backward.h</code> one breakpoint at a time.</p>
+    </div>
+    <div class="term">
+      <div class="term-bar"><span class="dots"><i></i><i></i><i></i></span>config/config.h</div>
+<pre><span class="k">static const int</span> BATCH_SIZE      = 32;
+<span class="k">static const int</span> BLOCK_SIZE      = 64;
+<span class="k">static const int</span> MAX_ITERS       = 5000;
+<span class="k">static const int</span> EVAL_INTERVAL   = 500;
+<span class="k">static const float</span> LEARNING_RATE = 5e-4f;
+<span class="k">static const int</span> N_EMBD          = 128;
+<span class="k">static const int</span> N_HEAD          = 2;
+<span class="k">static const int</span> N_LAYER         = 4;
+<span class="k">static const float</span> DROPOUT       = 0.05f;
+<span class="k">static const int</span> BPE_VOCAB_SIZE  = 2048;</pre>
+    </div>
+  </div>
+
+  <div style="height:40px"></div>
+
+  <div class="features">
+    <div class="feature"><h4>tokenizer.h</h4><p>Token-level BPE trained from scratch with a linked-list merge structure and hash-map pair lookup. TEXT mode for corpora in RAM; SHARDED mode memory-maps <code>uint16_t</code> token shards for billions of tokens.</p></div>
+    <div class="feature"><h4>get_batch()</h4><p>Prefix-sum index over shards gives O(1) random access. OpenMP parallelizes sampling across the batch dimension with per-thread RNG seeds for determinism.</p></div>
+    <div class="feature"><h4>Checkpointing</h4><p>Best-validation checkpoint written to <code>best_model.bin</code>. Load it back for autoregressive generation or a terminal chat session with a prepended system prompt.</p></div>
+    <div class="feature"><h4>Memory accounting</h4><p>Resident set size printed every step — <code>VmRSS</code> on Linux, <code>task_info</code> on macOS, <code>WorkingSetSize</code> on Windows. Every byte is accounted for in the code.</p></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="section-head">
+    <span class="mono-tag">Benchmarks</span>
+    <h2>Small models, measured end to end.</h2>
+    <p>Character-level and BPE models on TinyStories-class data. The point isn't leaderboard scores — it's watching the full pipeline converge on hardware you own.</p>
+  </div>
+  <div class="table-wrap">
+    <table class="bench">
+      <thead>
+        <tr><th>Params</th><th>Layers</th><th>Dim</th><th>Heads</th><th>Ctx</th><th>Vocab</th><th>Iters</th><th>Val Loss</th><th>Time</th><th>Hardware</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0.83M</td><td>4</td><td>128</td><td>4</td><td>64</td><td>105 char</td><td>3,000</td><td>1.6371</td><td>76m</td><td>CPU (AMD Ryzen)</td></tr>
+        <tr><td>2.00M</td><td>4</td><td>200</td><td>4</td><td>200</td><td>110 char</td><td>5,000</td><td>0.9301</td><td>86m</td><td>CPU x64</td></tr>
+        <tr><td>19.17M</td><td>4</td><td>200</td><td>4</td><td>200</td><td>~50K BPE</td><td>5,000</td><td>2.3934</td><td>83m</td><td>GPU (bfloat16)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:16px;color:var(--text-faint);font-size:13.5px;font-family:var(--mono)">CUDA path: ~19.6k tok/s in bfloat16. A CPU does 1–10 GFLOP/s of scalar matmul; an RTX 4090 does ~80 TFLOP/s.</p>
+</section>
+
+<section class="block">
+  <div class="cols">
+    <div>
+      <span class="mono-tag">What this is</span>
+      <h3>A readable reference for how transformer training works.</h3>
+      <p>If you've read Karpathy's <code>llm.c</code> and want the same concepts in C++ with the backward pass written out, this is it. The kind of thing you build once to prove you understand every operation from the matrix multiplications up to cross-entropy loss — then keep around because it trains small models on a laptop CPU without fighting a Python environment.</p>
+    </div>
+    <div>
+      <span class="mono-tag">What this isn't</span>
+      <h3>Not a production training framework.</h3>
+      <p>Models are tiny (sub-20M parameters). No distributed training, no gradient checkpointing, no model parallelism, no quantization. If you want to train something useful at scale, use llm.c, nanoGPT, or a real framework.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>llm.cpp — GPL-3.0 · <a href="https://github.com/Eamon2009/llm.cpp" target="_blank" rel="noreferrer">github.com/Eamon2009/llm.cpp</a></span>
+  <div class="foot-links">
+    <a href="docs.html">Docs</a>
+    <a href="README.md">README.md</a>
+    <a href="https://github.com/Eamon2009/llm.cpp/issues" target="_blank" rel="noreferrer">Issues</a>
+  </div>
+</footer>
+
+</body>
+</html>
