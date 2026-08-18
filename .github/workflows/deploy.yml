@@ -5,7 +5,7 @@ on:
   push:
     branches: [master]
     paths:
-      - "site/**"
+      - "."
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
